@@ -196,7 +196,7 @@ export default function ContextForm({ onDone }: ContextFormProps) {
         getKey: () => "",
         getLabel: () => "",
         isSelected: () => false,
-        onSelect: () => {},
+        onSelect: () => { },
         nextStep: 4,
       },
     };
@@ -312,8 +312,8 @@ export default function ContextForm({ onDone }: ContextFormProps) {
             setStep(currentCfg.nextStep);
           }
         }}
-        // type="button"
-        // disabled={readonly}
+      // type="button"
+      // disabled={readonly}
       >
         {currentCfg.bandera ? currentCfg.bandera(p, 45) : null}
         <h2>
@@ -372,24 +372,23 @@ export default function ContextForm({ onDone }: ContextFormProps) {
         </div>
 
         <div className="flex p-5 transition-all sm:flex-col items-center justify-center w-full space-2">
-          {step === 4 ? 
-          <div className="justify-arrownd items-center transition-all rounded-sm p-2">
-            <h2 className="text-2xl">¿Que acciones planea realizar?</h2>
-            <div className="flex flex-col items-start mt-5 space-y-3">
-              <FieldGroup>
-
-              <Field className="flex items-center space-x-2">
-                <Checkbox checked={true}  />
-                <FieldLabel className="text-lg">- Visualizar información</FieldLabel>
-              </Field>
-              </FieldGroup>
-              <span className="text-lg">- Consultar reportes</span>
-              <span className="text-lg">- Descargar información</span>
-              <span className="text-lg">- Configurar alertas</span>
-              <span className="text-lg">- Integrar con otras herramientas</span>
+          {step === 4 ?
+            <div className="justify-arrownd items-center transition-all rounded-sm p-2">
+              <h2 className="text-2xl">¿Que acciones planea realizar?</h2>
+              <div className="flex flex-col items-start mt-5 space-y-3">
+                <FieldGroup>
+                  <Field className="flex flex-col items-center space-x-2">
+                    <div className="flex" ><Checkbox /></div>
+                    <FieldLabel className="text-lg">- Visualizar información</FieldLabel>
+                  </Field>
+                </FieldGroup>
+                <span className="text-lg">- Consultar reportes</span>
+                <span className="text-lg">- Descargar información</span>
+                <span className="text-lg">- Configurar alertas</span>
+                <span className="text-lg">- Integrar con otras herramientas</span>
+              </div>
             </div>
-          </div>
-          : <div className="justify-arrownd items-center transition-all rounded-sm p-2">{catalogoOpciones[step].options?.map((p) => renderButton(p, cfg))}</div>}
+            : <div className="justify-arrownd items-center transition-all rounded-sm p-2">{catalogoOpciones[step].options?.map((p) => renderButton(p, cfg))}</div>}
         </div>
       </div>
 
