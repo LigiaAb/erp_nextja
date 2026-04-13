@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-25",
+  "items": [
+    {
+      "id": "logging-boton-cliente",
+      "categoria": "logging",
+      "titulo": "Log de boton cliente con logButtonClick",
+      "archivo": "ejemplos/logging/boton-cliente-logbuttonclick.md",
+      "fuentesProyecto": [
+        "lib/logs/logButtonClick.ts"
+      ]
+    },
+    {
+      "id": "logging-link-server",
+      "categoria": "logging",
+      "titulo": "Log server-side para Link con buildLoggedLinkHref",
+      "archivo": "ejemplos/logging/link-server-buildloggedlinkhref.md",
+      "fuentesProyecto": [
+        "lib/logs/serverLinkLogger.ts",
+        "app/api/logs/link/route.ts",
+        "modules/dashboard/ui/navbar.tsx"
+      ]
+    },
+    {
+      "id": "tanstack-usefetch-catalogos",
+      "categoria": "tanstack",
+      "titulo": "Uso de hooks useFetch de catalogos",
+      "archivo": "ejemplos/tanstack/usefetch-catalogos.md",
+      "fuentesProyecto": [
+        "fetch/fetchFactory.ts",
+        "fetch/configuracion/catalogos.ts",
+        "fetch/configuracion/accesos.ts"
+      ]
+    },
+    {
+      "id": "custom-editable-table",
+      "categoria": "components-custom",
+      "titulo": "EditableTable con metadata y acciones",
+      "archivo": "ejemplos/components-custom/editable-table-metadata.md",
+      "fuentesProyecto": [
+        "components/custom/Table.tsx",
+        "types/components/table.ts",
+        "modules/dashboard/configuracion/catalogos/tipo-documentacion/DocumentacionTabla.tsx"
+      ]
+    },
+    {
+      "id": "custom-stepper",
+      "categoria": "components-custom",
+      "titulo": "Uso base de StepperRoot y StepItem",
+      "archivo": "ejemplos/components-custom/stepper-basico.md",
+      "fuentesProyecto": [
+        "components/custom/Stepper.tsx",
+        "types/components/stepper.ts"
+      ]
+    }
+  ]
+}
+

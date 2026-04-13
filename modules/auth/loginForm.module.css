@@ -1,0 +1,20 @@
+@reference "tailwindcss";
+
+.iniciarSesion {
+  @apply w-full;
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
+
+.iniciarSesion:hover {
+  background-color: var(--color-secondary);
+  color: var(--color-secondary-foreground);
+}
+
+.reiniciarContrasena {
+  @apply w-full cursor-pointer;
+}
+.reiniciarContrasena:hover {
+  background-color: oklch(from var(--secondary) l c h / 0.5);
+  color: var(--color-secondary);
+}
