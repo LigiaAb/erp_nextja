@@ -16,6 +16,8 @@ import useCatalogosTarifa from "../hooks/useCatalogosTarifas";
 import { CATALOGOS_AGREGAR_TODOS, DEFAULT_TODOS_VALUE } from "../lib/tarifaHelppers";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { CatalogMetodo, CatalogServicio } from "@/fetch/pricing/tarifas";
+import { LoaderSvg } from "@/components/loader";
 
 type SelectOptionBase = {
   value: string | number;
@@ -24,7 +26,7 @@ type SelectOptionBase = {
 
 type FormularioProps = {
   tipoFormulario?: TipoFormulario;
-  defaultValues?: Record<string, unknown>;
+  defaultValues?: Partial<CatalogServicio> & Partial<CatalogMetodo>;
   handleInsertar?: (payload: Record<string, unknown>) => Promise<void>;
   handleActualizar?: (payload: Record<string, unknown>) => Promise<void>;
   obligatorios?: string[];
@@ -51,11 +53,11 @@ export const TarifaFormulario = ({
 }: FormularioProps) => {
   const formId = React.useId();
 
-  const groupclassess: React.ComponentProps<"div">["className"] = React.useMemo(() => cn("grid gap-2 border px-5 pb-5 rounded-lg"), []);
+  const groupclassess: React.ComponentProps<"div">["className"] = React.useMemo(() => cn("grid gap-2 border px-5 pb-5 rounded-lg overflow-auto"), []);
 
   const {
     catalogos: catalogosProcesados,
-    isLoading,
+    isLoading: isLoadingCatalogos,
     fetchOptionsProveedores,
   } = useCatalogosTarifa({
     // Opcional: agregar TODOS a ciertos catálogos
@@ -69,11 +71,13 @@ export const TarifaFormulario = ({
     tipoFormulario,
     defaultValues,
     catalogosProcesados,
-    isLoading,
+    isLoading: isLoadingCatalogos,
     inputsToHide,
     inputsReadOnly,
     obligatorios,
   });
+
+  const isLoading = React.useMemo(() => isLoadingCatalogos, [isLoadingCatalogos]);
 
   const handleGuardar = async () => {
     const payload = valoresSoloCodigos();
@@ -191,10 +195,12 @@ export const TarifaFormulario = ({
     );
   };
 
-  if (isLoading) return <p>Cargando...</p>;
-
-  return (
-    <div className="space-y-4 p-2 my-5 rounded-2xl bg-muted">
+  return isLoading ? (
+    <div className="w-full h-full bg-muted/50 absolute z-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 justify-center items-center flex">
+      <LoaderSvg className="" />
+    </div>
+  ) : (
+    <div className="space-y-4 p-2 my-5 rounded-2xl ">
       {/* Renderizar inputs usando values, onInput, verificarSiEsLectura, verificarSiEsVisible */}
 
       <div className={cn(tipoFormulario === "filtro" ? "grid-cols-1" : "md:grid-cols-2 grid-cols-1", "grid gap-1")}>

@@ -9,7 +9,7 @@ import { selectcontext } from "@/store/context/contextSlice";
 import { selectAuth } from "@/store/auth/authSlice";
 import { CatalogCentroCosto, CatalogEmpresas } from "@/fetch/configuracion/accesos";
 import { CatalogTipo, CatalogTipoRelacion } from "@/fetch/configuracion/catalogos";
-import { CATALOGOS_AGREGAR_TODOS, DEFAULT_TODOS_VALUE } from "../lib/tarifaHelppers";
+import { CATALOGOS_AGREGAR_TODOS, convertClasificacionServicio, DEFAULT_TODOS_VALUE } from "../lib/tarifaHelppers";
 
 // ─── Tipos/helpers mínimos de soporte ────────────────────────────────────────
 // Se agregan helpers pequeños para no cambiar la lógica original del hook
@@ -58,21 +58,26 @@ export function useFormulario({
 
     Object.entries(fieldRules).forEach(([campo, regla]) => {
       const codigo = defaultValues?.[regla.cod];
-      if (codigo === undefined || codigo === null) return;
+      if (campo !== "tipoPago" && (codigo === undefined || codigo === null)) return;
 
       // Fechas
-      if (regla.tipo === "datetime") {
-        resultado[campo] = isDateInput(codigo) ? new Date(codigo) : null;
-        return;
-      }
+      // if (regla.tipo === "datetime") {
+      //   resultado[campo] = isDateInput(codigo) ? new Date(codigo) : null;
+      //   return;
+      // }
 
       // Selects
       const catalogo = catalogosProcesados?.[regla.catalogo ?? ""];
       if (Array.isArray(catalogo)) {
         if (campo === "tipoPago") {
-          resultado[campo] = catalogo.find((e) => isRecord(e) && e.value === 131) ?? null;
+          resultado[campo] = catalogo.find((e) => isRecord(e) && (e.value === codigo || e.value === 131)) ?? null;
+        } else if (campo === "tipoClasificacion") {
+          resultado[campo] =
+            catalogo.find((e) => isRecord(e) && convertClasificacionServicio(e.value as number) === convertClasificacionServicio(codigo as number)) ?? null;
         } else {
-          resultado[campo] = catalogo.find((e) => isRecord(e) && e.value === codigo) ?? null;
+          if (CATALOGOS_AGREGAR_TODOS[regla.catalogo as keyof typeof CATALOGOS_AGREGAR_TODOS]) {
+            resultado[campo] = catalogo.find((e) => isRecord(e) && e.value === null) ?? null;
+          } else resultado[campo] = catalogo.find((e) => isRecord(e) && e.value === codigo) ?? null;
         }
       }
     });
@@ -199,12 +204,14 @@ export function useFormulario({
       });
       return siguiente;
     });
-  }, [defaultValues, defaultValuesProcesados]);
+  }, [defaultValues]);
 
   // ── onInput: cambiar un campo ──────────────────────────────────────────────
   const onInput = React.useCallback(({ id, val }: { id: string; val: unknown }) => {
     setValues((prev) => {
       if (Object.is(prev?.[id], val)) return prev;
+
+      console.log(val);
 
       const next = { ...prev };
       const regla = fieldRules[id];

@@ -200,6 +200,7 @@ export const fieldRules: Record<string, FieldRule> = {
     cod: "cod_tipo_tarifa",
     catalogo: "tiposTarifa",
     payload: ["metodo"],
+    default: { cod_tipo: 97, nom_tipo: "PUBLICA", label: "PUBLICA", value: 97 },
   },
 
   metodo: {

@@ -288,11 +288,8 @@ function CellEditor<TData extends object>(props: {
           addonProps={{
             className: cn(commonClassName, "border-l bg-background px-2"),
           }}
-          popoverContentProps={{
+          comboboxContentProps={{
             className: "w-[var(--radix-popover-trigger-width)] p-0",
-          }}
-          commandInputProps={{
-            placeholder: "Buscar...",
           }}
         />
       );
@@ -587,6 +584,11 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
     onPdf,
     onPrint,
     onKanban,
+
+    className,
+
+    initialPageSize = 10,
+    pageSizeOptions = [5, 10, 15, 25, 50],
   } = props;
 
   const trackTableButton = React.useCallback(
@@ -751,6 +753,15 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
     [getRowId, onDelete],
   );
 
+  const resolvedHeaderActions = React.useMemo(() => {
+    return (headerActions ?? []).filter((action) => {
+      if (typeof action.visible === "function") {
+        return action.visible({ metadata });
+      }
+      return action.visible ?? true;
+    });
+  }, [headerActions, metadata]);
+
   const actionsConfig = React.useMemo<TableActionsConfig<TData>>(
     () => ({
       showFrontColumn: actions?.showFrontColumn ?? true,
@@ -845,6 +856,37 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
     trackRowAction,
   ]);
 
+  function getTextWidth(text: string, font = "12px Inter") {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return 0;
+
+    context.font = font;
+    return context.measureText(text).width;
+  }
+
+  const columnAutoSizes = React.useMemo(() => {
+    const result: Record<string, number> = {};
+
+    columns.forEach((column) => {
+      const headerWidth = getTextWidth(String(column.header));
+
+      const maxCellWidth = Math.max(
+        ...tableData.map((row) => {
+          const value = row[column.id];
+          return getTextWidth(String(value ?? ""));
+        }),
+      );
+
+      result[column.id] = Math.min(
+        Math.max(headerWidth, maxCellWidth) + 32, // padding
+        400, // límite
+      );
+    });
+
+    return result;
+  }, [columns, tableData]);
+
   const tableColumns = React.useMemo<ColumnDef<TData>[]>(() => {
     const mapped: ColumnDef<TData>[] = [];
 
@@ -889,7 +931,7 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
     }
 
     mapped.push(
-      ...(columns.map((column) => ({
+      ...(columns.map((column, index) => ({
         id: String(column.id),
         accessorKey: column.id,
         header: ({ column: tanColumn }) => {
@@ -951,8 +993,9 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
           );
         },
         enableResizing: true,
-        size: typeof column.width === "number" ? column.width : 180,
-        minSize: 80,
+        size: typeof column.width === "number" ? column.width : index === columns.length - 1 ? 180 : (columnAutoSizes[column.id] ?? 80),
+
+        minSize: 10,
         maxSize: 600,
       })) as ColumnDef<TData>[]),
     );
@@ -1090,7 +1133,7 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
     },
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: initialPageSize,
       },
     },
     globalFilterFn: (row, _columnId, filterValue) => {
@@ -1144,15 +1187,41 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
   );
 
   return (
-    <div className="w-full rounded-xl border bg-background">
-      <div className="flex flex-col gap-3 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className={cn("w-full rounded-xl border bg-background", className)}>
+      <div className="flex flex-col gap-3 border-b px-3 py-3 sm:flex-row sm:items-center w-full">
         <div className="min-w-0">
           {title ? <h2 className={cn("font-semibold tracking-tight", compact ? "text-sm" : "text-base")}>{title}</h2> : null}
           {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
         </div>
-        <div className="flex items-center gap-2">
-          {headerActions ? <div className="flex flex-nowrap  items-center gap-2">{headerActions}</div> : null}
+        <div className="flex flex-wrap max-w-full items-end gap-2 ml-auto">
+          {resolvedHeaderActions.map((action) => {
+            const disabled = typeof action.disabled === "function" ? action.disabled({ metadata }) : (action.disabled ?? false);
 
+            return (
+              <Button
+                key={action.id}
+                type="button"
+                variant={action.variant ?? "default"}
+                size={action.size ?? "sm"}
+                title={action.title ?? action.label}
+                className={action.className}
+                disabled={disabled}
+                onClick={() => {
+                  trackTableButton(action.id, action.title ?? action.label);
+                  void action.onClick?.({
+                    metadata,
+                    track: trackTableButton,
+                  });
+                }}
+              >
+                {action.icon}
+                {action.size !== "icon" ? action.label : null}
+              </Button>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap max-w-full items-end gap-2">
           {searchable ? (
             <Input
               value={globalFilter ?? ""}
@@ -1341,7 +1410,7 @@ export function EditableTable<TData extends object>(props: EditableTableProps<TD
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[5, 10, 15, 25, 50].map((size) => (
+              {pageSizeOptions.map((size) => (
                 <SelectItem key={size} value={String(size)}>
                   {size}
                 </SelectItem>

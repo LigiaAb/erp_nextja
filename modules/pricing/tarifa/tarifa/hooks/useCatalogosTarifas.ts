@@ -3,10 +3,12 @@
 import { useCallback, useMemo } from "react";
 import { CatalogCentroCosto, CatalogEmpresas, useFetchCentrosCosto, useFetchEmpresas } from "@/fetch/configuracion/accesos";
 import {
+  CatalogEstado,
   CatalogIncoterm,
   CatalogRubro,
   CatalogTipo,
   CatalogTipoRelacion,
+  useFetchEstados,
   useFetchIncoterms,
   useFetchRubros,
   useFetchTipos,
@@ -14,6 +16,7 @@ import {
 } from "@/fetch/configuracion/catalogos";
 import { CatalogEntidad, CODS_TIPOS_ENTIDAD, fetchEntidadesPorCriterio, NOMBRES_TIPOS_ENTIDAD } from "@/fetch/entidades/entidadePorCriterio";
 import { SearchOptionsResponse } from "@/fetch/fetchFactory";
+import { CatalogMetodo, fetchMetodos } from "@/fetch/pricing/tarifas";
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -40,6 +43,8 @@ type CatalogosTarifa = {
   tiposCalculo: CatalogTipo[];
   metodosCalculo: CatalogTipo[];
   tiposTarifa: CatalogTipo[];
+  tiposPago: CatalogTipo[];
+  estados: CatalogEstado[];
 };
 
 type UseCatalogosTarifaOptions = {
@@ -97,12 +102,13 @@ const agregarTodosACatalogo = <T extends { label?: string; value?: unknown }>(
 
 const useCatalogosTarifa = ({ agregarTodos }: UseCatalogosTarifaOptions = {}) => {
   // ── Fetchers estáticos ───────────────────────────────────────────────────────
-  const empresasFetch = useFetchEmpresas();
-  const centrosCostoFetch = useFetchCentrosCosto();
-  const rubrosFetch = useFetchRubros();
-  const tiposFetch = useFetchTipos();
-  const tiposRelacionFetch = useFetchTiposRelacionado();
-  const incotermsFetch = useFetchIncoterms();
+  const empresasFetch = useFetchEmpresas({ cod_estado: 1 });
+  const centrosCostoFetch = useFetchCentrosCosto({ cod_estado: 1 });
+  const rubrosFetch = useFetchRubros({ cod_estado: 1 });
+  const tiposFetch = useFetchTipos({ cod_estado: 1 });
+  const tiposRelacionFetch = useFetchTiposRelacionado({ cod_estado: 1 });
+  const incotermsFetch = useFetchIncoterms({ cod_estado: 1 });
+  const estadosFetch = useFetchEstados({ cod_estado: 1 });
 
   // ── Loading global ───────────────────────────────────────────────────────────
   const isLoading = useMemo(
@@ -112,8 +118,17 @@ const useCatalogosTarifa = ({ agregarTodos }: UseCatalogosTarifaOptions = {}) =>
       rubrosFetch.isLoading ||
       tiposFetch.isLoading ||
       tiposRelacionFetch.isLoading ||
+      incotermsFetch.isLoading ||
+      estadosFetch.isLoading,
+    [
+      empresasFetch.isLoading,
+      centrosCostoFetch.isLoading,
+      rubrosFetch.isLoading,
+      tiposFetch.isLoading,
+      tiposRelacionFetch.isLoading,
       incotermsFetch.isLoading,
-    [empresasFetch.isLoading, centrosCostoFetch.isLoading, rubrosFetch.isLoading, tiposFetch.isLoading, tiposRelacionFetch.isLoading, incotermsFetch.isLoading],
+      estadosFetch.isLoading,
+    ],
   );
 
   //  // ── Catálogos procesados ─────────────────────────────────────────────────────
@@ -136,13 +151,24 @@ const useCatalogosTarifa = ({ agregarTodos }: UseCatalogosTarifaOptions = {}) =>
       tiposCalculo: allTipos.filter((t) => t.tipo_tabla === "CALCULO"),
       metodosCalculo: allTipos.filter((t) => t.tipo_tabla === "METODO"),
       tiposTarifa: allTipos.filter((t) => t.tipo_tabla === "TARIFA"),
+      tiposPago: allTipos.filter((t) => t.tipo_tabla === "PAGO"),
+      estados: (estadosFetch.data?.items ?? []) as CatalogEstado[],
     };
 
     // Aplicar opción TODOS a los catálogos configurados
     return Object.fromEntries(
       Object.entries(base).map(([key, value]) => [key, agregarTodosACatalogo(value as { label?: string; value?: unknown }[], key, agregarTodos)]),
     ) as CatalogosTarifa;
-  }, [empresasFetch.data, centrosCostoFetch.data, rubrosFetch.data, tiposFetch.data, tiposRelacionFetch.data, incotermsFetch.data, agregarTodos]);
+  }, [
+    empresasFetch.data,
+    centrosCostoFetch.data,
+    rubrosFetch.data,
+    tiposFetch.data,
+    tiposRelacionFetch.data,
+    incotermsFetch.data,
+    estadosFetch.data,
+    agregarTodos,
+  ]);
 
   // ── Búsqueda async de proveedores ────────────────────────────────────────────
   const fetchOptionsProveedores = useCallback(async (searchTerm: string = ""): Promise<CatalogEntidad[]> => {
@@ -163,6 +189,18 @@ const useCatalogosTarifa = ({ agregarTodos }: UseCatalogosTarifaOptions = {}) =>
       return [];
     }
   }, []);
+  // ── Búsqueda async de proveedores ────────────────────────────────────────────
+  const fetchMetodoByServicio = useCallback(async (cod_servicio: number): Promise<CatalogMetodo> => {
+    try {
+      const response: SearchOptionsResponse<CatalogMetodo> = await fetchMetodos({ cod_servicio });
+
+      // Eliminar duplicados por value
+      return (response.items[0] ?? {}) as CatalogMetodo;
+    } catch (error) {
+      console.error("Error al buscar el metodo:", error);
+      return {} as CatalogMetodo;
+    }
+  }, []);
 
   // ── Retorno ──────────────────────────────────────────────────────────────────
   return useMemo(
@@ -170,8 +208,9 @@ const useCatalogosTarifa = ({ agregarTodos }: UseCatalogosTarifaOptions = {}) =>
       catalogos,
       isLoading,
       fetchOptionsProveedores,
+      fetchMetodoByServicio,
     }),
-    [catalogos, isLoading, fetchOptionsProveedores],
+    [catalogos, isLoading, fetchOptionsProveedores, fetchMetodoByServicio],
   );
 };
 

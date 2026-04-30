@@ -65,6 +65,22 @@ export type EditableColumn<TData extends object> = {
   editor?: (args: { value: unknown; row: TData; column: EditableColumn<TData>; onChange: (value: unknown) => void }) => ReactNode;
 };
 
+type HeaderActionConfig<TData extends object> = {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  variant?: "default" | "outline" | "ghost" | "destructive" | "secondary";
+  size?: "default" | "sm" | "icon";
+  title?: string;
+  className?: string;
+  visible?: boolean | ((context: { metadata: EditableTableProps<TData>["metadata"] }) => boolean);
+  disabled?: boolean | ((context: { metadata: EditableTableProps<TData>["metadata"] }) => boolean);
+  onClick?: (context: {
+    metadata: EditableTableProps<TData>["metadata"];
+    track: (action: string, label: string, extra?: Record<string, unknown>) => void;
+  }) => void | Promise<void>;
+};
+
 export type EditableTableProps<TData extends object> = {
   metadata: CustomComponentMetadata;
   title?: string;
@@ -78,7 +94,7 @@ export type EditableTableProps<TData extends object> = {
 
   actions?: TableActionsConfig<TData>;
 
-  headerActions?: React.ReactNode;
+  headerActions?: HeaderActionConfig<TData>[];
 
   /**
    * Nueva fila arriba de la tabla.
@@ -122,4 +138,9 @@ export type EditableTableProps<TData extends object> = {
   onPdf?: (rowId: RowId, row: TData) => void | Promise<void>;
   onPrint?: (rowId: RowId, row: TData) => void | Promise<void>;
   onKanban?: (rowId: RowId, row: TData) => void | Promise<void>;
+
+  className?: string;
+
+  initialPageSize?: number;
+  pageSizeOptions?: number[];
 };

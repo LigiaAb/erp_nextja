@@ -1,6 +1,5 @@
 "use client";
 
-import { TipoRelacion } from "@/types/configuracion/tipo_relacionado";
 import { createCatalogFetcher, createCatalogHook, createCatalogMutationFetcher, createCatalogMutationHook, type CatalogBase } from "../fetchFactory";
 import {
   ActualizarTipoDocumentacionBody,
@@ -12,8 +11,11 @@ import {
   ActualizarCommodityBody,
   Rubro,
   Tipo,
+  Estado,
+  Incoterm,
+  ConfiguracionActividad,
+  TipoRelacion,
 } from "@/types/configuracion";
-import { Incoterm } from "@/types/configuracion/incoterm";
 
 export type CatalogTipoDocumentacion = TipoDocumentacion & CatalogBase;
 export type CatalogErrores = CatalogoError & CatalogBase;
@@ -22,6 +24,8 @@ export type CatalogRubro = Rubro & CatalogBase;
 export type CatalogTipo = Tipo & CatalogBase;
 export type CatalogTipoRelacion = TipoRelacion & CatalogBase;
 export type CatalogIncoterm = Incoterm & CatalogBase;
+export type CatalogEstado = Estado & CatalogBase;
+export type CatalogConfiguracionActividad = ConfiguracionActividad & CatalogBase;
 
 const ENDPOINTS = {
   // TIPOS DE DOCUMENTACION
@@ -48,6 +52,12 @@ const ENDPOINTS = {
 
   // TIPOS RELACIONADOS
   tiposRelacionados: "/api/appweb/lista-relacion-tipo",
+
+  // ESTADOS
+  estados: "/api/appweb/listaestados",
+
+  // CONFIGURACION ACTIVIDAD
+  configuracion_actividad: "/api/appweb/lista-configuracion-actividad",
 } as const;
 
 function mapTipoDocumentacion(item: TipoDocumentacion): CatalogTipoDocumentacion {
@@ -92,6 +102,18 @@ function mapIncoterm(item: Incoterm): CatalogIncoterm {
 
   return { ...item, label, value };
 }
+function mapEstado(item: Estado): CatalogEstado {
+  const value = item.cod_estado ?? 0;
+  const label = item.estado_desc;
+
+  return { ...item, label, value };
+}
+function mapConfiguracionActividad(item: ConfiguracionActividad): CatalogConfiguracionActividad {
+  const value = item.cod_estado ?? 0;
+  const label = item.estado_desc;
+
+  return { ...item, label, value };
+}
 
 // GLOBAL USE
 // TIPOS DE DOCUMENTACION
@@ -118,6 +140,10 @@ export const fetchTipo = createCatalogFetcher(ENDPOINTS.tipos, mapTipos);
 export const fetchTipoRelacionado = createCatalogFetcher(ENDPOINTS.tiposRelacionados, mapTiposRelacionado);
 // INCOTERM
 export const fetchIncoterms = createCatalogFetcher(ENDPOINTS.incoterms, mapIncoterm);
+// ESTADOS
+export const fetchEstados = createCatalogFetcher(ENDPOINTS.estados, mapEstado);
+// CONFIGURACION ACTIVIDAD
+export const fetchConfiguracionesActividad = createCatalogFetcher(ENDPOINTS.configuracion_actividad, mapConfiguracionActividad);
 
 // HOOKS
 // TIPOS DE DOCUMENTACION
@@ -144,3 +170,7 @@ export const useFetchTipos = createCatalogHook("tipo", fetchTipo);
 export const useFetchTiposRelacionado = createCatalogHook("tipo_relacionado", fetchTipoRelacionado);
 // INCOTERMS
 export const useFetchIncoterms = createCatalogHook("incoterms", fetchIncoterms);
+// ESTADOS
+export const useFetchEstados = createCatalogHook("estados", fetchEstados);
+// CONFIGURACION ACTIVIDAD
+export const useFetchConfiguracionesActividad = createCatalogHook("configuracion_actividad", fetchConfiguracionesActividad);

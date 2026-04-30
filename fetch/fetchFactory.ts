@@ -915,3 +915,125 @@ export function createCatalogMutationHook<TBody = unknown, TResponse = unknown, 
     });
   };
 }
+
+/**
+ * Extrae el campo `data` de un envelope estándar del backend.
+ *
+ * Soporta:
+ * - payload directo (no envelope): lo retorna tal cual
+ * - envelope con data: retorna payload.data
+ *
+ * Ejemplo de entrada:
+ * {
+ *   status: 200,
+ *   message: "SUCCESS",
+ *   data: { total: 8, tipos: { ... }, estados: { ... } }
+ * }
+ *
+ * Salida:
+ * { total: 8, tipos: { ... }, estados: { ... } }
+ */
+function extractDataFromEnvelope<TData>(payload: TData | ApiEnvelope<TData>): TData {
+  if (!isRecord(payload)) return payload as TData;
+  if ("data" in payload && payload.data !== undefined) return payload.data as TData;
+  return payload as TData;
+}
+
+/**
+ * Respuesta normalizada para consultas de resumen / aggregate.
+ *
+ * A diferencia de CatalogResponse (que siempre tiene `items: T[]`),
+ * aquí el dato principal es un objeto arbitrario tipado como TData.
+ *
+ * Ejemplos de uso:
+ * - dashboards con totales
+ * - resúmenes de estado
+ * - KPIs o métricas
+ */
+export type SummaryResponse<TData> = {
+  status?: number;
+  message?: string;
+  data: TData;
+  raw?: unknown;
+};
+
+/**
+ * Factory para crear fetchers de tipo resumen / aggregate.
+ *
+ * Recibe:
+ * - endpoint: ruta del recurso
+ * - mapData: función para transformar el objeto data recibido
+ *
+ * Retorna:
+ * - una función async que consulta el endpoint
+ * - aplica filtros opcionales como query params
+ * - y devuelve SummaryResponse normalizado
+ *
+ * Ejemplo de respuesta soportada:
+ * {
+ *   status: 200,
+ *   message: "SUCCESS",
+ *   data: {
+ *     total: 8,
+ *     tipos: { "SEGUIMIENTO COTIZACION": 8 },
+ *     estados: { "FINALIZADO": 5, "EN PROCESO": 3 }
+ *   }
+ * }
+ */
+export function createSummaryFetcher<TSource, TMapped>(endpoint: string, mapData: (data: TSource) => TMapped) {
+  return async function fetchSummary(filters?: QueryFilters): Promise<SummaryResponse<TMapped>> {
+    const url = buildUrl(endpoint, filters);
+    const payload = await getJson<TSource | ApiEnvelope<TSource>>(url);
+
+    const rawData = extractDataFromEnvelope(payload);
+    const mapped = mapData(rawData as TSource);
+
+    return {
+      status: isRecord(payload) ? toNumber(payload.status) : undefined,
+      message: isRecord(payload)
+        ? ((typeof payload.mensaje === "string" ? payload.mensaje : undefined) ?? (typeof payload.message === "string" ? payload.message : undefined))
+        : undefined,
+      data: mapped,
+      raw: payload,
+    };
+  };
+}
+
+/**
+ * Factory para crear hooks useQuery de tipo resumen / aggregate.
+ *
+ * Se basa en un fetcher creado con createSummaryFetcher.
+ *
+ * El queryKey incluye:
+ * - keyBase: identificador base de la query
+ * - filtros actuales: permite cache por combinación de filtros
+ *
+ * Opciones adicionales:
+ * - staleTime por defecto de 5 minutos (ajustable desde options)
+ * - refetchOnWindowFocus desactivado
+ * - placeholderData con data previa mientras refresca
+ */
+export function createSummaryHook<TData>(keyBase: string, fetcher: (filters?: QueryFilters) => Promise<SummaryResponse<TData>>) {
+  return function useSummary(
+    filters?: QueryFilters,
+    options?: Omit<UseQueryOptions<SummaryResponse<TData>, ApiError, SummaryResponse<TData>, readonly [string, QueryFilters]>, "queryKey" | "queryFn">,
+  ): UseQueryResult<SummaryResponse<TData>, ApiError> {
+    return useTanstackQuery<SummaryResponse<TData>, ApiError, SummaryResponse<TData>, readonly [string, QueryFilters]>({
+      queryKey: [keyBase, filters ?? {}] as const,
+      queryFn: () => fetcher(filters),
+      staleTime: 1000 * 60 * 5,
+      refetchOnWindowFocus: false,
+      placeholderData: (previousData) => previousData,
+
+      ...options,
+
+      meta: {
+        feature: "summary",
+        entity: keyBase,
+        action: "get",
+        logName: `Consultar resumen ${keyBase}`,
+        ...(options?.meta ?? {}),
+      },
+    });
+  };
+}

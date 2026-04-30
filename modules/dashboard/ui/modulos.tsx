@@ -7,7 +7,15 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFetchCategorias, useFetchMenus, useFetchModulos } from "@/fetch/configuracion/accesos";
 import { selectcontext } from "@/store/context/contextSlice";
-import { selectCurrentCategoria, selectCurrentMenu, selectCurrentModulo, setCurrentCategoria, setCurrentMenu, setCurrentModulo, setCurrentModuloName } from "@/store/navigation/navigationSlice";
+import {
+  selectCurrentCategoria,
+  selectCurrentMenu,
+  selectCurrentModulo,
+  setCurrentCategoria,
+  setCurrentMenu,
+  setCurrentModulo,
+  setCurrentModuloName,
+} from "@/store/navigation/navigationSlice";
 import { selectPermisos } from "@/store/permisos/permisosSlice";
 import { ChevronRightIcon } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -19,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { sortByText } from "@/lib/sort";
 import { logButtonClick } from "@/lib/logs/logButtonClick";
 import { logGeneralEvent } from "@/lib/logs/logGeneralEvent";
-
+import { useSyncNavigationFromPath } from "@/modules/dashboard/hooks/useSyncNavigationFromPath";
 /**
  * Estructura normalizada para cualquier nivel del árbol.
  *
@@ -87,9 +95,15 @@ export default function Modulos() {
    * - controla qué módulo y menú están abiertos en runtime
    * - NO modifica el current de redux hasta seleccionar una categoría
    */
-  const [openModulo, setOpenModulo] = React.useState<number | null>(() => Number(idModulo as number) ?? Number(sessionStorage.getItem("currentModulo")) ?? null);
-  const [openMenu, setOpenMenu] = React.useState<number | null>(() => Number(idMenu as number) ?? Number(sessionStorage.getItem("currentMenu")) ?? null);
+  const [openModulo, setOpenModulo] = React.useState<number | null>(() => {
+    const stored = sessionStorage.getItem("currentModulo");
+    return idModulo ? Number(idModulo) : stored ? Number(stored) : null;
+  });
 
+  const [openMenu, setOpenMenu] = React.useState<number | null>(() => {
+    const stored = sessionStorage.getItem("currentMenu");
+    return idMenu ? Number(idMenu) : stored ? Number(stored) : null;
+  });
   /**
    * Texto de búsqueda del menú
    */
@@ -99,17 +113,23 @@ export default function Modulos() {
    * Permisos del contexto actual (país / empresa / centro de costo).
    */
   const modulosDePermisos = React.useMemo(
-    () => permisos?.paises[ctx?.paisId?.cod_pais as number]?.empresas?.[ctx.empresaId?.cod_empresa as number]?.centrosCosto?.[ctx.centroCostoId?.cod_cc as number]?.modulos ?? {},
+    () =>
+      permisos?.paises[ctx?.paisId?.cod_pais as number]?.empresas?.[ctx.empresaId?.cod_empresa as number]?.centrosCosto?.[ctx.centroCostoId?.cod_cc as number]
+        ?.modulos ?? {},
     [ctx.centroCostoId, ctx.empresaId, ctx.paisId, permisos?.paises],
   );
 
   /**
    * Accesores de permisos por módulo / menú.
    */
-  const menusDePermisos = React.useCallback((currentModuloId: number) => (!currentModuloId ? {} : (modulosDePermisos?.[currentModuloId]?.menus ?? {})), [modulosDePermisos]);
+  const menusDePermisos = React.useCallback(
+    (currentModuloId: number) => (!currentModuloId ? {} : (modulosDePermisos?.[currentModuloId]?.menus ?? {})),
+    [modulosDePermisos],
+  );
 
   const categoriasDePermisos = React.useCallback(
-    (currentModuloId: number, currentMenuId: number) => (!currentModuloId || !currentMenuId ? {} : (menusDePermisos(currentModuloId)?.[currentMenuId]?.categorias ?? {})),
+    (currentModuloId: number, currentMenuId: number) =>
+      !currentModuloId || !currentMenuId ? {} : (menusDePermisos(currentModuloId)?.[currentMenuId]?.categorias ?? {}),
     [menusDePermisos],
   );
 
@@ -119,7 +139,11 @@ export default function Modulos() {
    */
   const categoriasProcesadas = React.useCallback(
     (moduloId: number, menuId: number): Categoria[] =>
-      mergeWithCatalog(Object.values(categoriasDePermisos(moduloId, menuId)), categoriasFetch.data?.items ?? [], (base, permission) => base.cod_categoria === permission.cod_categoria),
+      mergeWithCatalog(
+        Object.values(categoriasDePermisos(moduloId, menuId)),
+        categoriasFetch.data?.items ?? [],
+        (base, permission) => base.cod_categoria === permission.cod_categoria,
+      ),
     [categoriasDePermisos, categoriasFetch.data?.items],
   );
 
@@ -129,10 +153,12 @@ export default function Modulos() {
    */
   const menusProcesados = React.useCallback(
     (moduloId: number): Menu[] =>
-      mergeWithCatalog(Object.values(menusDePermisos(moduloId)), menusFetch.data?.items ?? [], (base, permission) => base.cod_menu === permission.cod_menu).map((menuItem) => ({
-        ...menuItem,
-        categorias: categoriasProcesadas(moduloId, menuItem.cod_menu).filter((categoria) => !!menuItem.categorias?.[categoria.cod_categoria]),
-      })),
+      mergeWithCatalog(Object.values(menusDePermisos(moduloId)), menusFetch.data?.items ?? [], (base, permission) => base.cod_menu === permission.cod_menu).map(
+        (menuItem) => ({
+          ...menuItem,
+          categorias: categoriasProcesadas(moduloId, menuItem.cod_menu).filter((categoria) => !!menuItem.categorias?.[categoria.cod_categoria]),
+        }),
+      ),
     [menusDePermisos, menusFetch.data?.items, categoriasProcesadas],
   );
 
@@ -142,10 +168,12 @@ export default function Modulos() {
    */
   const modulosProcesados = React.useMemo(
     (): Modulo[] =>
-      mergeWithCatalog(Object.values(modulosDePermisos), modulosFetch.data?.items ?? [], (base, permission) => base.cod_modulo === permission.cod_modulo).map((moduloItem) => ({
-        ...moduloItem,
-        menus: menusProcesados(moduloItem.cod_modulo).filter((menu) => !!moduloItem.menus?.[menu.cod_menu]),
-      })),
+      mergeWithCatalog(Object.values(modulosDePermisos), modulosFetch.data?.items ?? [], (base, permission) => base.cod_modulo === permission.cod_modulo).map(
+        (moduloItem) => ({
+          ...moduloItem,
+          menus: menusProcesados(moduloItem.cod_modulo).filter((menu) => !!moduloItem.menus?.[menu.cod_menu]),
+        }),
+      ),
     [modulosDePermisos, modulosFetch.data?.items, menusProcesados],
   );
 
@@ -237,6 +265,12 @@ export default function Modulos() {
 
   const filteredTree = React.useMemo(() => filterTree(treeItems, filter), [treeItems, filter]);
 
+  useSyncNavigationFromPath({
+    treeItems,
+    setOpenModulo,
+    setOpenMenu,
+  });
+
   /**
    * Selección final:
    * aquí sí se actualiza redux porque ya se eligió una categoría.
@@ -254,8 +288,8 @@ export default function Modulos() {
   React.useEffect(() => {
     // console.log(idModulo, idMenu);
     // Mantener visualmente abierto lo seleccionado
-    setOpenModulo(Number(idModulo as number) ?? null);
-    setOpenMenu(Number(idMenu as number) ?? null);
+    setOpenModulo(idModulo ? Number(idModulo) : null);
+    setOpenMenu(idMenu ? Number(idMenu) : null);
   }, [idModulo, idMenu]);
 
   /**
@@ -378,7 +412,7 @@ export default function Modulos() {
 
       handleSelectCategoria(modulo, menu, categoria);
 
-      sessionStorage.setItem("currentMenu", item.value.toString());
+      sessionStorage.setItem("currentMenu", parents.menu.value.toString());
       sessionStorage.setItem("currentModulo", parents.modulo.value.toString());
       sessionStorage.setItem("currentModuloName", parents.modulo.label.toString());
       sessionStorage.setItem("currentCategoria", item.value.toString());
@@ -464,8 +498,10 @@ export default function Modulos() {
       >
         {!isSidebarCollapsed ? collapsibleTrigger : collapsibleTriggerToottip}
 
-        <CollapsibleContent className={cn("mt-1 ml-5 overflow-hidden style-lyra:ml-4", isMenu && " max-h-[20vh] scroll")}>
-          <div className="flex flex-col gap-1">{item.children?.map((child) => renderItem(child, isModulo ? { modulo: item } : { modulo: parents?.modulo, menu: item }))}</div>
+        <CollapsibleContent className={cn("mt-1 ml-5 overflow-hidden style-lyra:ml-4", isMenu && " scroll")}>
+          <div className="flex flex-col gap-1">
+            {item.children?.map((child) => renderItem(child, isModulo ? { modulo: item } : { modulo: parents?.modulo, menu: item }))}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     );

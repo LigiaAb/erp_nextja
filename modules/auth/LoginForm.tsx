@@ -16,6 +16,7 @@ import { getUser, loginAction } from "@/lib/auth/actions";
 import { useDispatch } from "react-redux";
 import { apiFetch } from "@/lib/api/apiFetch";
 import { setUserData } from "@/store/auth/authSlice";
+import { LoaderSvg } from "@/components/loader";
 
 const schema = z.object({
   email: z
@@ -92,6 +93,7 @@ const LoginForm = () => {
 
   return (
     <div className="min-w-full" id="test">
+      {loading && <LoaderSvg />}
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <FieldGroup>
           <FieldSet>

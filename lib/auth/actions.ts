@@ -14,6 +14,7 @@ type BackendEnvelope = {
 
 export async function loginAction(data: LoginBody): Promise<LoginResult> {
   const encoded = btoa(unescape(encodeURIComponent(data.pass)));
+  console.log("enccoded", encoded);
   const user = { usuario: data.usuario, pass: encoded };
   const response = await apiFetch<LoginResponse, LoginBody, LoginApiError>("/public/api/ingresar", {
     method: "POST",

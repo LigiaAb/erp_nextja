@@ -51,3 +51,4 @@ export default authSlice.reducer;
 /* ---------------- SELECTORS ---------------- */
 
 export const selectAuth = (state: RootState) => state.auth;
+export const getCurrentUser = (state: RootState) => state.auth.cod_usuario;
